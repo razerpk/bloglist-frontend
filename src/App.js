@@ -43,7 +43,6 @@ const App = () => {
     setMessage({ message, type })
     setTimeout(() => setMessage([null]), 5000)
   }
-  console.log('blogs :', blogs)
 
   const addBlog = async (event) => {
     event.preventDefault()
