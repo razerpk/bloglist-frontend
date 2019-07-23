@@ -1,35 +1,27 @@
 import React from 'react'
+import PropTypes from 'prop-types' // teht 5.11
 
-const BlogForm = (props) => {
+const BlogForm = ({
+  addBlog,
+  title,
+  author,
+  url,
+}) => {
+
   return (
     <div>
-      <form onSubmit={props.addBlog}>
+      <form onSubmit={addBlog}>
         <div>
           title:
-            <input
-            type="text"
-            value={props.newTitle}
-            name="Title"
-            onChange={props.handleTitleChange}
-          />
+          <input {...title}/>
         </div>
         <div>
           author:
-            <input
-            type="text"
-            value={props.newAuthor}
-            name="Author"
-            onChange={props.handleAuthorChange}
-          />
+          <input {...author}/>
         </div>
         <div>
           Url:
-            <input
-            type="text"
-            value={props.newUrl}
-            name="Url"
-            onChange={props.handleUrlChange}
-          />
+          <input {...url}/>
         </div>
         <div>
           <button type='submit'>create</button>
@@ -39,4 +31,10 @@ const BlogForm = (props) => {
   )
 }
 
+BlogForm.propTypes = {
+  addBlog: PropTypes.func.isRequired,
+  title: PropTypes.object.isRequired,
+  author: PropTypes.object.isRequired,
+  url: PropTypes.object.isRequired,
+}
 export default BlogForm

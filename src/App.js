@@ -5,21 +5,27 @@ import Blog from './components/Blog'
 import BlogForm from './components/BlogForm'
 import Notification from './components/Notification'
 import Togglable from './components/Togglable'
+import { useField } from './hooks'
+
 
 const App = () => {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [newTitle, setTitle] = useState('')
-  const [newAuthor, setAuthor] = useState('')
-  const [newUrl, setUrl] = useState('')
+  // eslint-disable-next-line
+  const noReset = ({ reset, ...rest }) => rest
+  const username  = useField('text')
+  const password = useField('password')
+  const title = useField('text')
+  const author = useField('text')
+  const url = useField('url')
+
   const [blogs, setBlogs] = useState([])
   const [user, setUser] = useState(null)
   const [message, setMessage] = useState([null])
 
+
   useEffect(() => {
     const fetchData = async () => {
-      const data = await blogsService.getAll() 
-      setBlogs(data) 
+      const data = await blogsService.getAll()
+      setBlogs(data)
     }
     fetchData()
   }, [])
@@ -33,59 +39,87 @@ const App = () => {
     }
   }, [])
 
-  const notify = ({message, type}) => {
+  const notify = ({ message, type }) => {
     setMessage({ message, type })
     setTimeout(() => setMessage([null]), 5000)
   }
+  console.log('blogs :', blogs)
 
-  const addBlog = (event) => {
+  const addBlog = async (event) => {
     event.preventDefault()
 
     try{
       const blogObject = {
-        title: newTitle,
-        author: newAuthor,
-        url: newUrl
+        title: title.value,
+        author: author.value,
+        url: url.value
       }
-      blogsService
-        .create(blogObject)
-          .then(returnedObject => {
-            returnedObject = {
-              ...returnedObject,
-              user: {
-                name: user.name
-              }
-            }       
-            setBlogs(blogs.concat(returnedObject))
-            setTitle('')
-            setAuthor('')
-            setUrl('')
-            notify({
-                message: `a new blog ${returnedObject.title} by ${returnedObject.author} added`, 
-                type:'success'
-              })
-          })  
+      let returnedObject = await blogsService.create(blogObject)
+
+      // adding user info to show blog creator and remove button without refresh
+      returnedObject = {
+        ...returnedObject,
+        user: {
+          id: returnedObject.user,
+          name: user.name,
+          username: user.username
+        }
+      }
+      setBlogs(blogs.concat(returnedObject))
+      title.reset()
+      author.reset()
+      url.reset()
+      notify({
+        message: `a new blog ${returnedObject.title} by ${returnedObject.author} added`,
+        type:'success'
+      })
     } catch (exception) {
+      console.log('exception :', exception)
+    }
+  }
+
+  const removeBlog = async (id) => {
+
+    try {
+      const findblog = blogs.find(blog => blog.id = id)
+      await blogsService.deleteBlog(id)
+
+      setBlogs(blogs.filter(blog => blog.id !== findblog.id))
+
+
+      notify({
+        message: `${findblog.title} by ${findblog.author} was deleted`,
+        type:'success'
+      })
+    } catch (exception) {
+      console.log('exception :', exception)
     }
   }
 
   const updateLikes = async (id) => {
-    const blog = blogs.find(blog => blog.id === id)
-    
+
     try{
+      const blog = blogs.find(blog => blog.id === id)
       const changedBlog = {
         ...blog,
         likes: blog.likes+1,
       }
 
-      const returnedObject = await blogsService.update(blog.id, changedBlog)
+      let returnedObject = await blogsService.update(id, changedBlog)
+
+      // adding user info to show blog creator and remove button without refresh
+      returnedObject = {
+        ...returnedObject,
+        user: blog.user
+      }
+
       setBlogs(blogs.map(blog => blog.id !== id ? blog : returnedObject))
       notify({
-        message: `You liked ${blog.title} by ${blog.author}`, 
+        message: `You liked ${blog.title} by ${blog.author}`,
         type:'success'
       })
     }catch (exception) {
-      console.log('exception :', exception);
+      console.log('exception :', exception)
     }
   }
 
@@ -94,48 +128,39 @@ const App = () => {
 
     try {
       const user = await loginService.login({
-        username, password
+        username: username.value,
+        password: password.value
       })
-  
+
       window.localStorage.setItem(
         'loggedBlogappUser', JSON.stringify(user)
       )
       blogsService.setToken(user.token)
       setUser(user)
-      setUsername('')
-      setPassword('')
+      username.reset()
+      password.reset()
     } catch (exception) {
-      notify({message: `wrong username or password`, type:'error'})
+      notify({ message: 'wrong username or password', type:'error' })
     }
   }
 
   const loginForm = () => {
     return (
-      <div>
+      <div className='loginForm'>
         <h2>Log in to application</h2>
         <Notification message={message.message} type={message.type}/>
         <form onSubmit={handleLogin}>
           <div>
             username
-              <input
-              type="text"
-              value={username}
-              name="Username"
-              onChange={({ target }) => setUsername(target.value)}
-            />
+            <input {...noReset(username)} />
           </div>
           <div>
             password
-              <input
-              type="password"
-              value={password}
-              name="Password"
-              onChange={({ target }) => setPassword(target.value)}
-            />
+            <input {...noReset(password)} />
           </div>
           <button type="submit">login</button>
         </form>
-    </div>
+      </div>
     )
   }
 
@@ -146,7 +171,7 @@ const App = () => {
 
   const blogForm = () => {
     return (
-      <div>
+      <div className='blogs'>
         <h2>blogs</h2>
         <Notification message={message.message} type={message.type}/>
         <p>
@@ -155,19 +180,21 @@ const App = () => {
         </p>
 
         <Togglable buttonLabel="new blog">
-          <BlogForm 
-          addBlog={addBlog}
-          newTitle={newTitle}
-          newAuthor={newAuthor}
-          newUrl={newUrl}
-          handleTitleChange={(event) => setTitle(event.target.value)}
-          handleAuthorChange={(event) => setAuthor(event.target.value)}
-          handleUrlChange={(event) => setUrl(event.target.value)}
+          <BlogForm
+            addBlog={addBlog}
+            title={noReset(title)}
+            author={noReset(author)}
+            url={noReset(url)}
           />
         </Togglable>
-
         {blogs.sort((a, b) => b.likes - a.likes).map(blog =>
-          <Blog key={blog.id} blog={blog} updateLikes={() => updateLikes(blog.id)}/>
+          <Blog
+            key={blog.id}
+            blog={blog}
+            updateLikes={() => updateLikes(blog.id)}
+            removeBlog={() => removeBlog(blog.id)}
+            username={user.username}
+          />
         )}
       </div>
     )
@@ -175,10 +202,10 @@ const App = () => {
 
   return (
     user === null
-    ? loginForm()
-    : blogForm()
+      ? loginForm()
+      : blogForm()
   )
 
 }
 
-export default App;
+export default App

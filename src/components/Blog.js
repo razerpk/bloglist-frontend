@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 
-const Blog = ({ blog, updateLikes }) =>  {
+const Blog = ({ blog, updateLikes, removeBlog, username }) =>  {
+  const [visibility, setVisibility] = useState(false)
+
   const blogStyle = {
     paddingTop: 10,
     paddingLeft: 2,
@@ -9,18 +11,27 @@ const Blog = ({ blog, updateLikes }) =>  {
     marginBottom: 5
   }
 
-  const [visibility, setVisibility] = useState(false)
+  const areYouSure = () => {
+    if (window.confirm(`remove blog ${blog.title} by ${blog.author}`))
+    {removeBlog()}
+  }
+
+  const showRemoveButton = username === blog.user.username
+    ? <button onClick={areYouSure}>remove</button>
+    : null
 
   const showBlogInfo = () => {
-    if (visibility){
+
+    if (visibility) {
       return (
-        <div>
+        <div className='togglableContent'>
           <div>{blog.url}</div>
           <div>
-            {blog.likes} likes 
+            {blog.likes} likes
             <button onClick={updateLikes}>like</button>
           </div>
           <div>added by {blog.user.name} </div>
+          {showRemoveButton}
         </div>
       )
     }
@@ -28,12 +39,12 @@ const Blog = ({ blog, updateLikes }) =>  {
   }
 
   return (
-    <div style={blogStyle}> 
-      <div onClick={() => setVisibility(!visibility)}>
+    <div style={blogStyle} className='blog'>
+      <div onClick={() => setVisibility(!visibility)} className='header'>
         {blog.title} {blog.author}
       </div>
       {showBlogInfo()}
-  </div>
+    </div>
   )
 }
 
